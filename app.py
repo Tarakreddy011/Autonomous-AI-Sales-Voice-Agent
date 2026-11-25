@@ -1,6 +1,6 @@
 """
-Streamlit Application: Autonomous Sales Voice Agent UI (Step 2: Agent Brain with Memory)
-Integrates STT -> LLM with Contextual History -> TTS, with per-call isolation.
+Streamlit Application: Autonomous Sales Voice Agent UI (Step 3: RAG & Tool Calling)
+Integrates STT -> LLM with Contextual History & ChromaDB Tool Calling -> TTS.
 """
 
 import uuid
@@ -30,15 +30,15 @@ if "last_processed_hash" not in st.session_state:
 if "latest_audio_reply" not in st.session_state:
     st.session_state.latest_audio_reply = None
 
-if "audio_version" not in st.session_state:
-    st.session_state.audio_version = 0
-
 if "latest_timings" not in st.session_state:
     st.session_state.latest_timings = None
 
+if "latest_retrieved_chunks" not in st.session_state:
+    st.session_state.latest_retrieved_chunks = []
+
 # Header & Session Status
 st.title("🪑 Comfort Chairs - Sales Voice Agent")
-st.caption("Step 2: Full Voice Loop with Conversational Memory (STT -> LLM -> TTS)")
+st.caption("Step 3: Multilingual RAG Knowledge Base + Tool Calling Loop")
 
 # Display Session ID badge
 col_session, col_action = st.columns([2, 1])
@@ -51,8 +51,8 @@ with col_action:
             st.session_state.call_active = False
             st.session_state.last_processed_hash = None
             st.session_state.latest_audio_reply = None
-            st.session_state.audio_version = 0
             st.session_state.latest_timings = None
+            st.session_state.latest_retrieved_chunks = []
             # Generate a new session_id for the next caller
             st.session_state.session_id = str(uuid.uuid4())[:8]
             st.rerun()
@@ -72,8 +72,14 @@ if not st.session_state.call_active:
             session_store.append_message(st.session_state.session_id, "assistant", greeting)
             audio_bytes, tts_time = text_to_speech(greeting, "en")
             st.session_state.latest_audio_reply = audio_bytes
-            st.session_state.audio_version += 1
-            st.session_state.latest_timings = {"stt": 0.0, "llm": 0.0, "tts": tts_time, "total": tts_time}
+            st.session_state.latest_retrieved_chunks = []
+            st.session_state.latest_timings = {
+                "stt": 0.0,
+                "llm": 0.0,
+                "tts": tts_time,
+                "total": tts_time,
+                "is_greeting": True
+            }
             st.session_state.call_active = True
             st.rerun()
             
@@ -84,8 +90,14 @@ if not st.session_state.call_active:
             session_store.append_message(st.session_state.session_id, "assistant", greeting)
             audio_bytes, tts_time = text_to_speech(greeting, "hi")
             st.session_state.latest_audio_reply = audio_bytes
-            st.session_state.audio_version += 1
-            st.session_state.latest_timings = {"stt": 0.0, "llm": 0.0, "tts": tts_time, "total": tts_time}
+            st.session_state.latest_retrieved_chunks = []
+            st.session_state.latest_timings = {
+                "stt": 0.0,
+                "llm": 0.0,
+                "tts": tts_time,
+                "total": tts_time,
+                "is_greeting": True
+            }
             st.session_state.call_active = True
             st.rerun()
 
@@ -104,11 +116,27 @@ if st.session_state.call_active:
     if st.session_state.latest_timings:
         t = st.session_state.latest_timings
         with st.expander("⏱️ Latency Metrics", expanded=True):
+            if t.get("is_greeting"):
+                st.caption("ℹ️ *Initial greeting is pre-scripted. Real-time STT & LLM timings will appear on your first spoken turn.*")
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("STT (Whisper)", f"{t['stt']}s")
-            c2.metric("LLM (Groq)", f"{t['llm']}s")
+            c2.metric("LLM + RAG (Groq)", f"{t['llm']}s")
             c3.metric("TTS (edge-tts)", f"{t['tts']}s")
             c4.metric("Total Latency", f"{t['total']}s")
+
+    # B2. Retrieved Knowledge (RAG Proof)
+    with st.expander("🔍 Retrieved Knowledge (RAG Proof)", expanded=False):
+        chunks = st.session_state.get("latest_retrieved_chunks", [])
+        if chunks:
+            st.write(f"**Found {len(chunks)} relevant chunks in ChromaDB for this turn:**")
+            for idx, c in enumerate(chunks, 1):
+                name = c.get("metadata", {}).get("name", "Item")
+                category = c.get("metadata", {}).get("category", "")
+                score = c.get("score", 0.0)
+                st.markdown(f"**{idx}. {name}** `[{category}]` *(Similarity: `{score}`)*")
+                st.text(c.get("content", ""))
+        else:
+            st.caption("No catalog lookup was required for the last turn.")
 
     # C. Microphone Input with STABLE key (prevents tearing down browser MediaStreamRecorder)
     st.write("---")
@@ -136,8 +164,8 @@ if st.session_state.call_active:
                             st.warning("⚠️ No speech detected. Please speak closer to your microphone.")
                             st.session_state.last_processed_hash = audio_hash
                         else:
-                            # 2. LLM Reasoning
-                            reply_text, llm_time = respond(
+                            # 2. LLM Reasoning + RAG Tool Calling
+                            reply_text, llm_time, retrieved_chunks = respond(
                                 session_id=st.session_state.session_id,
                                 user_text=transcript,
                                 detected_language=detected_lang
@@ -146,15 +174,16 @@ if st.session_state.call_active:
                             # 3. TTS Synthesis
                             reply_audio, tts_time = text_to_speech(reply_text, detected_lang)
 
-                            # 4. Update session state
+                            # 4. Update session state with real metrics
                             total_time = round(stt_time + llm_time + tts_time, 2)
                             st.session_state.latest_audio_reply = reply_audio
-                            st.session_state.audio_version += 1
+                            st.session_state.latest_retrieved_chunks = retrieved_chunks
                             st.session_state.latest_timings = {
                                 "stt": stt_time,
                                 "llm": llm_time,
                                 "tts": tts_time,
-                                "total": total_time
+                                "total": total_time,
+                                "is_greeting": False
                             }
                             st.session_state.last_processed_hash = audio_hash
                             st.rerun()

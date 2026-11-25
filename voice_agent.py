@@ -13,6 +13,7 @@ import edge_tts
 
 import session_store
 from prompts import SYSTEM_PROMPT
+from tools import TOOLS_SCHEMA, execute_tool_call
 
 # Fix for Windows asyncio ProactorBasePipeTransport WinError 10054:
 # On Windows, the default ProactorEventLoop throws an unhandled callback error
@@ -148,16 +149,16 @@ def text_to_speech(text: str, language: str = "en") -> tuple[bytes, float]:
     return audio_bytes, round(elapsed, 2)
 
 
-def respond(session_id: str, user_text: str, detected_language: str = "en") -> tuple[str, float]:
+def respond(session_id: str, user_text: str, detected_language: str = "en") -> tuple[str, float, list]:
     """
-    Core Agent reasoning step:
+    Core Agent reasoning step with RAG Tool Calling:
     1. Records the user's message into the session store.
-    2. Retrieves up to MAX_HISTORY_MESSAGES for conversational context.
-    3. Prompts the Groq LLM with system constraints and language matching.
-    4. Saves the assistant reply into the session store.
+    2. Builds conversation context with recent history.
+    3. Runs an agentic tool-calling loop (up to 3 rounds) using Groq and search_knowledge.
+    4. Saves the final assistant reply into the session store.
     
     Returns:
-        tuple of (assistant_reply_text: str, elapsed_seconds: float)
+        tuple of (assistant_reply_text: str, elapsed_seconds: float, retrieved_chunks: list)
     """
     client = get_groq_client()
     
@@ -183,18 +184,49 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
     messages = [system_message] + recent_history
     
     start_time = time.perf_counter()
+    all_retrieved_chunks = []
+    reply_text = ""
     
-    try:
-        completion = client.chat.completions.create(
-            model=GROQ_CHAT_MODEL,
-            messages=messages,
-            temperature=0.6,
-            max_tokens=300
-        )
-        raw_content = completion.choices[0].message.content or ""
-        reply_text = raw_content.strip()
-    except Exception as e:
-        reply_text = ""
+    # Tool-calling loop: maximum 3 rounds to prevent runaway execution
+    MAX_TOOL_ROUNDS = 3
+    for round_idx in range(MAX_TOOL_ROUNDS):
+        try:
+            completion = client.chat.completions.create(
+                model=GROQ_CHAT_MODEL,
+                messages=messages,
+                tools=TOOLS_SCHEMA,
+                tool_choice="auto",
+                temperature=0.6,
+                max_tokens=300
+            )
+            response_msg = completion.choices[0].message
+        except Exception as e:
+            reply_text = ""
+            break
+
+        # Check if the model decided to call a tool
+        if response_msg.tool_calls:
+            # Append model's assistant message with tool call definitions to conversation working memory
+            messages.append(response_msg)
+            
+            for tool_call in response_msg.tool_calls:
+                func_name = tool_call.function.name
+                func_args = tool_call.function.arguments
+                tool_result_json, chunks = execute_tool_call(func_name, func_args)
+                all_retrieved_chunks.extend(chunks)
+                
+                # Append tool result back to the working conversation list
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": func_name,
+                    "content": tool_result_json
+                })
+        else:
+            # Model generated its final text response
+            raw_content = response_msg.content or ""
+            reply_text = raw_content.strip()
+            break
 
     # Absolute fallback guardrail: NEVER let reply_text be empty
     if not reply_text:
@@ -206,9 +238,9 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
         
     elapsed = time.perf_counter() - start_time
     
-    # 4. Save assistant reply to session store (only non-empty messages)
+    # 4. Save final assistant reply to session store
     if reply_text.strip():
         session_store.append_message(session_id, "assistant", reply_text)
     
-    return reply_text, round(elapsed, 2)
+    return reply_text, round(elapsed, 2), all_retrieved_chunks
 

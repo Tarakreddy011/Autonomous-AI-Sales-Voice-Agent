@@ -1,0 +1,214 @@
+{
+  "store_name": "Comfort Chairs",
+  "products": [
+    {
+      "id": "chair_01",
+      "name": "AeroMesh Basic",
+      "category": "office",
+      "price_inr": 3500,
+      "key_features": "Mid-back breathable mesh, fixed armrests, pneumatic seat height adjustment, 360-degree swivel.",
+      "materials": "Breathable nylon mesh, molded foam seat, heavy-duty plastic base.",
+      "colours": "Black, Grey",
+      "warranty": "1 year limited warranty",
+      "delivery_time": "2 to 3 business days"
+    },
+    {
+      "id": "chair_02",
+      "name": "AeroMesh Executive",
+      "category": "office",
+      "price_inr": 6800,
+      "key_features": "High-back mesh design, cushioned lumbar support pad, 2D adjustable armrests, multi-lock synchro tilt.",
+      "materials": "Korean mesh, high-density foam cushion, chrome metal base.",
+      "colours": "Black, Slate Grey, Navy Blue",
+      "warranty": "2 years warranty",
+      "delivery_time": "2 to 3 business days"
+    },
+    {
+      "id": "chair_03",
+      "name": "ErgoFlex SpineCare Pro",
+      "category": "ergonomic",
+      "price_inr": 12500,
+      "key_features": "Dynamic adaptive lumbar support for back pain relief, 3D armrests, adjustable headrest, seat slide depth adjustment.",
+      "materials": "Glass-fiber reinforced frame, breathable elastomeric mesh, cast aluminum alloy base.",
+      "colours": "Charcoal Black, Platinum Grey",
+      "warranty": "3 years comprehensive warranty",
+      "delivery_time": "3 to 4 business days"
+    },
+    {
+      "id": "chair_04",
+      "name": "PostureGuard Ortho",
+      "category": "ergonomic",
+      "price_inr": 9200,
+      "key_features": "Orthopedic dual-curve backrest for posture correction, memory foam lumbar cushion, multi-tilt lock.",
+      "materials": "Dual-layer breathable mesh, memory foam seat, nylon casters.",
+      "colours": "Jet Black, Forest Green",
+      "warranty": "2 years warranty",
+      "delivery_time": "2 to 4 business days"
+    },
+    {
+      "id": "chair_05",
+      "name": "TitanStrike Gaming Chair",
+      "category": "gaming",
+      "price_inr": 14500,
+      "key_features": "180-degree flat recline, neck pillow and magnetic lumbar support, 4D armrests, sturdy steel frame.",
+      "materials": "Premium PU leather, cold-cured foam padding, reinforced steel frame, class 4 gas lift.",
+      "colours": "Racing Red, Midnight Black, Electric Blue",
+      "warranty": "2 years frame and mechanism warranty",
+      "delivery_time": "3 to 5 business days"
+    },
+    {
+      "id": "chair_06",
+      "name": "HyperGlide Stealth",
+      "category": "gaming",
+      "price_inr": 17800,
+      "key_features": "Breathable faux leather with cooling gel layer, 155-degree tilt mechanism, silent polyurethane glide wheels.",
+      "materials": "Perforated leatherette, cold-cure molded foam, black powder-coated metal base.",
+      "colours": "All Black, Stealth Camo",
+      "warranty": "3 years warranty",
+      "delivery_time": "3 to 5 business days"
+    },
+    {
+      "id": "chair_07",
+      "name": "RoyalRest Manual Recliner",
+      "category": "recliner",
+      "price_inr": 19500,
+      "key_features": "3-stage manual push-back recline, extra padded pillow-top armrests, extendable footrest, deep plush back.",
+      "materials": "Soft velvet upholstery, kiln-dried solid wood frame, pocket spring seating.",
+      "colours": "Beige, Coffee Brown, Navy Blue",
+      "warranty": "5 years on internal wooden frame, 2 years on mechanism",
+      "delivery_time": "4 to 7 business days"
+    },
+    {
+      "id": "chair_08",
+      "name": "CloudLounge Motorized Recliner",
+      "category": "recliner",
+      "price_inr": 24900,
+      "key_features": "Smooth electric motorized recline button with USB fast-charging port, independent footrest control.",
+      "materials": "Top-grain bonded leather, heavy-gauge steel recline chassis, high-resilience foam.",
+      "colours": "Warm Tan, Dark Espresso, Jet Black",
+      "warranty": "5 years frame warranty, 2 years electrical motor warranty",
+      "delivery_time": "5 to 7 business days"
+    },
+    {
+      "id": "chair_09",
+      "name": "Sheesham Classic Dining Chair",
+      "category": "dining",
+      "price_inr": 3200,
+      "key_features": "Traditional solid wood construction, ergonomic curved slatted back, handcrafted finish.",
+      "materials": "Solid Indian Sheesham wood (Rosewood), natural grain polish.",
+      "colours": "Honey Polish, Walnut Brown, Teak Finish",
+      "warranty": "3 years termite and manufacturing warranty",
+      "delivery_time": "3 to 5 business days"
+    },
+    {
+      "id": "chair_10",
+      "name": "UrbanNordic Padded Dining Chair",
+      "category": "dining",
+      "price_inr": 4400,
+      "key_features": "Scandinavian minimalist design, cushioned seat cushion, tapered solid beechwood legs.",
+      "materials": "Stain-resistant fabric upholstery, curved bentwood back, solid beechwood legs.",
+      "colours": "Mustard Yellow, Pastel Grey, Ocean Teal",
+      "warranty": "2 years warranty",
+      "delivery_time": "3 to 5 business days"
+    },
+    {
+      "id": "chair_11",
+      "name": "ComfortGlide Visitor Chair",
+      "category": "visitor",
+      "price_inr": 2800,
+      "key_features": "Cantilever sled base with anti-tipping glides, breathable mesh back, comfortable padded seat.",
+      "materials": "Chrome-plated tubular steel frame, breathable mesh, polyurethane arm pads.",
+      "colours": "Black, Charcoal Grey",
+      "warranty": "1 year warranty",
+      "delivery_time": "2 to 3 business days"
+    },
+    {
+      "id": "chair_12",
+      "name": "Prestige Reception Visitor Chair",
+      "category": "visitor",
+      "price_inr": 4100,
+      "key_features": "Plush leatherette cushioning, heavy-duty chrome cantilever frame, padded arm sleeves.",
+      "materials": "High-grade leatherette, chrome sled frame, high-density foam padding.",
+      "colours": "Black, Tan Brown",
+      "warranty": "2 years warranty",
+      "delivery_time": "2 to 4 business days"
+    },
+    {
+      "id": "chair_13",
+      "name": "SpinLift Lab & Drafting Stool",
+      "category": "stool",
+      "price_inr": 2200,
+      "key_features": "Height adjustable gas lift with circular chrome footrest ring, backless compact design, smooth rolling casters.",
+      "materials": "Waterproof PVC leatherette seat cushion, chrome-plated steel stem and foot ring.",
+      "colours": "Black, White, Red",
+      "warranty": "1 year warranty",
+      "delivery_time": "2 to 3 business days"
+    },
+    {
+      "id": "chair_14",
+      "name": "LoftMetal Industrial Bar Stool",
+      "category": "stool",
+      "price_inr": 1800,
+      "key_features": "Stackable industrial metal frame, solid wooden top seat, rubber feet floor protectors.",
+      "materials": "Wrought iron powder-coated frame, solid natural pine wood seat.",
+      "colours": "Matte Black, Gunmetal Grey, Rustic Copper",
+      "warranty": "2 years structural warranty",
+      "delivery_time": "2 to 4 business days"
+    },
+    {
+      "id": "chair_15",
+      "name": "PerchComfort Saddle Stool",
+      "category": "stool",
+      "price_inr": 2900,
+      "key_features": "Ergonomic saddle-shaped seat to promote upright pelvic alignment, 360-degree swivel, height adjustable.",
+      "materials": "Molded PU foam, vinyl upholstery, aluminum 5-star star base.",
+      "colours": "Black, Blue",
+      "warranty": "1 year warranty",
+      "delivery_time": "2 to 4 business days"
+    }
+  ],
+  "faqs": [
+    {
+      "id": "faq_01",
+      "topic": "showroom_address_and_timings",
+      "question": "Where is your showroom located and what are your opening hours?",
+      "answer": "Our showroom is located at Plot 42, Furniture Hub, Ring Road, Bengaluru, Karnataka. We are open Monday through Saturday from 10:00 AM to 8:30 PM, and Sunday from 11:00 AM to 6:00 PM."
+    },
+    {
+      "id": "faq_02",
+      "topic": "delivery_charges_and_speed",
+      "question": "What are your delivery charges and how long does shipping take?",
+      "answer": "We provide free delivery across the city for orders above 3000 rupees. For orders under 3000 rupees, a nominal delivery fee of 250 rupees applies. Standard metro delivery takes 2 to 4 business days."
+    },
+    {
+      "id": "faq_03",
+      "topic": "return_and_cancellation_policy",
+      "question": "What is your return, replacement, or cancellation policy?",
+      "answer": "We offer a 7-day hassle-free replacement or return guarantee if the chair has any manufacturing defect, damage during transit, or fitment issue. Returned products must be in original condition with packaging."
+    },
+    {
+      "id": "faq_04",
+      "topic": "payment_options",
+      "question": "What payment methods do you accept?",
+      "answer": "We accept UPI (Google Pay, PhonePe, Paytm), all major credit and debit cards, net banking, Cash on Delivery (COD) for orders up to 10000 rupees, and 0% interest EMI options on select bank credit cards."
+    },
+    {
+      "id": "faq_05",
+      "topic": "assembly_and_installation",
+      "question": "Do chairs come pre-assembled or is assembly provided?",
+      "answer": "All chairs arrive with complete DIY toolkits and visual manuals taking only 10 to 15 minutes to assemble. We also provide free technician assembly at your doorstep within 24 hours of delivery across major metro areas."
+    },
+    {
+      "id": "faq_06",
+      "topic": "demo_visit_and_appointments",
+      "question": "Can I visit the showroom for a chair demo or book an appointment?",
+      "answer": "Yes, absolutely! We encourage customers to book a 30-minute showroom demo appointment where our ergonomic specialist will set up chairs tailored to your height, posture, and work hours."
+    },
+    {
+      "id": "faq_07",
+      "topic": "bulk_and_corporate_orders",
+      "question": "Do you offer corporate or bulk order discounts for offices?",
+      "answer": "Yes, we offer special corporate tier discounts starting from 10 chairs or more, including customized logo embroidery, customized fabric colors, and GST tax invoice credits."
+    }
+  ]
+}
