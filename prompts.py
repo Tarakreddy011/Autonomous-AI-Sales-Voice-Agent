@@ -47,3 +47,17 @@ GREETINGS = {
     "en": "Hello! Thank you for calling Comfort Chairs. I am Aria. How can I help you find the right chair today?",
     "hi": "नमस्ते! कम्फर्ट चेयर्स में कॉल करने के लिए धन्यवाद। मैं आरिया हूँ। आज मैं आपके लिए सही कुर्सी चुनने में कैसे मदद कर सकती हूँ?"
 }
+
+# Summary prompt for post‑call aggregation
+SUMMARIZE_PROMPT = """You are summarizing a sales call. The user may have spoken in English or Hindi. Produce ONLY a JSON object with the following keys:
+- summary: max three sentences, in English.
+- sentiment: one of Positive, Neutral, Negative.
+- lead_status: one of Willing, Not Willing, Needs Follow-up.
+- customer_name: string or null.
+- customer_phone: string or null.
+- requirement: string or null.
+- budget: string or null.
+- appointment_booked: true or false.
+- next_action: short sentence or null.
+Do NOT include any markdown code fences or extra text. Use null for any unknown value.
+"""

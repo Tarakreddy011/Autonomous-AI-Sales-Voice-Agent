@@ -9,6 +9,23 @@ Supports:
 
 import re
 import json
+import traceback
+import logging
+from typing import Tuple, List, Dict, Any, Optional
+
+# Global debug collector – cleared each turn in the UI
+DEBUG_LOG: List[dict] = []
+
+def _log_tool(name: str, args: dict, result_str: str, error: str = None):
+    entry = {"tool": name, "args": args, "result": result_str}
+    if error:
+        entry["error"] = error
+    DEBUG_LOG.append(entry)
+    if error:
+        print(f"[TOOL DEBUG] {name} FAILED\nArgs: {json.dumps(args, ensure_ascii=False)}\nError: {error}\n")
+    else:
+        print(f"[TOOL DEBUG] {name}\nArgs: {json.dumps(args, ensure_ascii=False)}\nResult: {result_str}\n")
+import json
 from datetime import datetime, date, timedelta
 from typing import Tuple, List, Dict, Any, Optional
 import knowledge_base

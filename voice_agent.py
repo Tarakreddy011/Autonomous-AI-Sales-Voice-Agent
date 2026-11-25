@@ -204,6 +204,24 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
             reply_text = ""
             break
 
+        # Guard: if Groq returns neither content nor tool calls, retry next round
+        if not getattr(response_msg, "content", None) and not getattr(response_msg, "tool_calls", None):
+            # continue to next iteration (will retry up to MAX_TOOL_ROUNDS)
+            continue
+        try:
+            completion = client.chat.completions.create(
+                model=GROQ_CHAT_MODEL,
+                messages=messages,
+                tools=TOOLS_SCHEMA,
+                tool_choice="auto",
+                temperature=0.6,
+                max_tokens=300
+            )
+            response_msg = completion.choices[0].message
+        except Exception as e:
+            reply_text = ""
+            break
+
         # Check if the model decided to call a tool
         if response_msg.tool_calls:
             # Append model's assistant message with tool call definitions to conversation working memory
