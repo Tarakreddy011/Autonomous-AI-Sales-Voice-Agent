@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 from groq import Groq
 import edge_tts
 
+import session_store
+from prompts import SYSTEM_PROMPT
+
 # Fix for Windows asyncio ProactorBasePipeTransport WinError 10054:
 # On Windows, the default ProactorEventLoop throws an unhandled callback error
 # when closing WebSockets (edge-tts). WindowsSelectorEventLoopPolicy prevents this.
@@ -21,6 +24,11 @@ if sys.platform == "win32":
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Groq Chat Model configuration:
+# Verified via API: 'openai/gpt-oss-20b' offers sub-second latency and supports tool calling
+GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-20b")
+MAX_HISTORY_MESSAGES = 12
 
 # Supported voices for edge-tts
 # We queried edge-tts directly and selected natural Indian voices:
@@ -136,3 +144,63 @@ def text_to_speech(text: str, language: str = "en") -> tuple[bytes, float]:
     elapsed = time.perf_counter() - start_time
     
     return audio_bytes, round(elapsed, 2)
+
+
+def respond(session_id: str, user_text: str, detected_language: str = "en") -> tuple[str, float]:
+    """
+    Core Agent reasoning step:
+    1. Records the user's message into the session store.
+    2. Retrieves up to MAX_HISTORY_MESSAGES for conversational context.
+    3. Prompts the Groq LLM with system constraints and language matching.
+    4. Saves the assistant reply into the session store.
+    
+    Returns:
+        tuple of (assistant_reply_text: str, elapsed_seconds: float)
+    """
+    client = get_groq_client()
+    
+    # 1. Save user turn to session history
+    session_store.append_message(session_id, "user", user_text)
+    
+    # 2. Retrieve history and trim to last N messages (prevents context blowout and lowers latency)
+    full_history = session_store.get_messages(session_id)
+    recent_history = full_history[-MAX_HISTORY_MESSAGES:]
+    
+    # 3. Dynamic language directive to strictly mirror caller language
+    lang_directive = (
+        "The customer just spoke Hindi. You must reply strictly in Hindi using Devanagari script."
+        if detected_language == "hi"
+        else "The customer just spoke English. You must reply strictly in English."
+    )
+    
+    system_message = {
+        "role": "system",
+        "content": f"{SYSTEM_PROMPT}\n\n[Active Call Rule]: {lang_directive}"
+    }
+    
+    messages = [system_message] + recent_history
+    
+    start_time = time.perf_counter()
+    
+    try:
+        completion = client.chat.completions.create(
+            model=GROQ_CHAT_MODEL,
+            messages=messages,
+            temperature=0.6,
+            max_tokens=150
+        )
+        reply_text = completion.choices[0].message.content.strip()
+    except Exception as e:
+        reply_text = (
+            "I apologize, I am experiencing a brief connection delay. Could you please repeat that?"
+            if detected_language == "en"
+            else "माफ़ कीजियेगा, कॉल में थोड़ी रुकावट आ गई थी। क्या आप कृपया दोबारा कह सकते हैं?"
+        )
+        
+    elapsed = time.perf_counter() - start_time
+    
+    # 4. Save assistant reply to session store
+    session_store.append_message(session_id, "assistant", reply_text)
+    
+    return reply_text, round(elapsed, 2)
+

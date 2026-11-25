@@ -1,101 +1,163 @@
 """
-Streamlit Application: Autonomous Sales Voice Agent UI (Step 1: Echo Voice Loop)
-Provides microphone input, session isolation, latency metrics, and audio playback.
+Streamlit Application: Autonomous Sales Voice Agent UI (Step 2: Agent Brain with Memory)
+Integrates STT -> LLM with Contextual History -> TTS, with per-call isolation.
 """
 
 import uuid
 import hashlib
 import streamlit as st
-from voice_agent import speech_to_text, text_to_speech
+import session_store
+from prompts import GREETINGS
+from voice_agent import speech_to_text, text_to_speech, respond
 
-# Page configuration
+# Page setup
 st.set_page_config(
-    page_title="AI Chair Sales Caller",
+    page_title="Comfort Chairs - AI Voice Agent",
     page_icon="🪑",
     layout="centered"
 )
 
-# 1. Session Isolation: Each browser tab gets its own unique session_id
+# 1. Per-Tab Session State Initialization
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())[:8]
 
-# 2. State management to prevent Streamlit from reprocessing the same audio on rerun
+if "call_active" not in st.session_state:
+    st.session_state.call_active = False
+
 if "last_processed_hash" not in st.session_state:
     st.session_state.last_processed_hash = None
-if "last_result" not in st.session_state:
-    st.session_state.last_result = None
 
-# Header & Session Info
-st.title("🪑 Furniture Sales Voice Agent")
-st.caption("Step 1: Thin End-to-End Voice Loop (Browser Mic -> STT -> TTS Playback)")
+if "latest_audio_reply" not in st.session_state:
+    st.session_state.latest_audio_reply = None
+
+if "latest_timings" not in st.session_state:
+    st.session_state.latest_timings = None
+
+# Header & Session Status
+st.title("🪑 Comfort Chairs - Sales Voice Agent")
+st.caption("Step 2: Full Voice Loop with Conversational Memory (STT -> LLM -> TTS)")
 
 # Display Session ID badge
-st.info(f"**Caller Session ID:** `{st.session_state.session_id}` (Isolated per browser tab)")
+col_session, col_action = st.columns([2, 1])
+with col_session:
+    st.info(f"**Active Caller Session:** `{st.session_state.session_id}`")
+with col_action:
+    if st.session_state.call_active:
+        if st.button("🔴 End Call", use_container_width=True, type="secondary"):
+            session_store.clear_session(st.session_state.session_id)
+            st.session_state.call_active = False
+            st.session_state.last_processed_hash = None
+            st.session_state.latest_audio_reply = None
+            st.session_state.latest_timings = None
+            # Generate a new session_id for the next caller
+            st.session_state.session_id = str(uuid.uuid4())[:8]
+            st.rerun()
 
 st.write("---")
 
-# 3. Audio Input from Browser Microphone
-st.subheader("🎙️ Speak into your microphone")
-audio_file = st.audio_input("Record your voice (English or Hindi)")
+# 2. Call Initialization: Opening Greeting
+if not st.session_state.call_active:
+    st.subheader("📞 Ready to connect with Aria")
+    st.write("Click below to simulate an incoming customer call. Aria will greet you first.")
+    
+    col_en, col_hi = st.columns(2)
+    with col_en:
+        if st.button("🟢 Start Call (English)", use_container_width=True, type="primary"):
+            greeting = GREETINGS["en"]
+            session_store.clear_session(st.session_state.session_id)
+            session_store.append_message(st.session_state.session_id, "assistant", greeting)
+            audio_bytes, tts_time = text_to_speech(greeting, "en")
+            st.session_state.latest_audio_reply = audio_bytes
+            st.session_state.latest_timings = {"stt": 0.0, "llm": 0.0, "tts": tts_time, "total": tts_time}
+            st.session_state.call_active = True
+            st.rerun()
+            
+    with col_hi:
+        if st.button("🟢 Start Call (हिंदी)", use_container_width=True, type="primary"):
+            greeting = GREETINGS["hi"]
+            session_store.clear_session(st.session_state.session_id)
+            session_store.append_message(st.session_state.session_id, "assistant", greeting)
+            audio_bytes, tts_time = text_to_speech(greeting, "hi")
+            st.session_state.latest_audio_reply = audio_bytes
+            st.session_state.latest_timings = {"stt": 0.0, "llm": 0.0, "tts": tts_time, "total": tts_time}
+            st.session_state.call_active = True
+            st.rerun()
 
-if audio_file is not None:
-    # Read the raw audio bytes
-    audio_bytes = audio_file.read()
+# 3. Active Call Interface
+if st.session_state.call_active:
+    # A. Display Live Agent Audio Player
+    if st.session_state.latest_audio_reply:
+        st.subheader("🔊 Aria Speaking")
+        st.audio(st.session_state.latest_audio_reply, format="audio/mp3", autoplay=True)
     
-    # Calculate an MD5 hash of the audio bytes
-    # This uniquely fingerprints this specific recording
-    audio_hash = hashlib.md5(audio_bytes).hexdigest()
-    
-    # Check if this exact audio was already processed
-    if audio_hash != st.session_state.last_processed_hash:
-        with st.spinner("Transcribing with Groq Whisper..."):
-            try:
-                transcript, detected_lang, stt_time = speech_to_text(audio_bytes)
-                
-                if not transcript:
-                    st.warning("⚠️ No speech detected. Please speak closer to your microphone.")
-                    st.session_state.last_result = None
-                else:
-                    # Echo loop: synthesize the transcript back in the detected language
-                    with st.spinner("Synthesizing speech with edge-tts..."):
-                        tts_bytes, tts_time = text_to_speech(transcript, detected_lang)
-                    
-                    # Store results in session state
-                    st.session_state.last_result = {
-                        "transcript": transcript,
-                        "language": detected_lang,
-                        "stt_time": stt_time,
-                        "tts_time": tts_time,
-                        "audio_bytes": tts_bytes
-                    }
-                # Always update the processed hash so silence isn't repeatedly re-analyzed
-                st.session_state.last_processed_hash = audio_hash
-            except Exception as e:
-                st.error(f"❌ Error during voice processing: {str(e)}")
-                st.info("Tip: Make sure your GROQ_API_KEY is properly set in the .env file.")
+    # B. Timing Breakdown
+    if st.session_state.latest_timings:
+        t = st.session_state.latest_timings
+        with st.expander("⏱️ Latency Metrics", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("STT (Whisper)", f"{t['stt']}s")
+            c2.metric("LLM (Groq)", f"{t['llm']}s")
+            c3.metric("TTS (edge-tts)", f"{t['tts']}s")
+            c4.metric("Total Latency", f"{t['total']}s")
 
-# 4. Display results from session state (persists across reruns cleanly)
-if st.session_state.last_result:
-    res = st.session_state.last_result
-    
+    # C. Microphone Input
     st.write("---")
-    st.subheader("📝 Live Call Transcript")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        lang_label = "Hindi (hi-IN)" if res["language"] == "hi" else "English (en-IN)"
-        st.metric(label="Detected Language", value=lang_label)
-    with col2:
-        total_latency = round(res["stt_time"] + res["tts_time"], 2)
-        st.metric(label="Total Voice Latency", value=f"{total_latency} s")
-        
-    st.write(f"**Caller said:** \"{res['transcript']}\"")
-    
-    # Latency Breakdown
-    with st.expander("⏱️ Latency Breakdown", expanded=True):
-        st.write(f"- **STT (Groq Whisper Large v3):** `{res['stt_time']}s`")
-        st.write(f"- **TTS (edge-tts Neural):** `{res['tts_time']}s`")
-        
-    # Audio Player
-    st.subheader("🔊 Agent Voice Echo")
-    st.audio(res["audio_bytes"], format="audio/mp3")
+    st.subheader("🎙️ Speak to Aria")
+    audio_file = st.audio_input("Press record, speak, and press stop:")
+
+    if audio_file is not None:
+        audio_bytes = audio_file.read()
+        audio_hash = hashlib.md5(audio_bytes).hexdigest()
+
+        # Only process if this is a newly recorded audio snippet
+        if audio_hash != st.session_state.last_processed_hash:
+            with st.spinner("Processing voice..."):
+                try:
+                    # 1. STT
+                    transcript, detected_lang, stt_time = speech_to_text(audio_bytes)
+
+                    if not transcript:
+                        st.warning("⚠️ No speech detected. Please speak closer to your microphone.")
+                    else:
+                        # 2. LLM Reasoning
+                        reply_text, llm_time = respond(
+                            session_id=st.session_state.session_id,
+                            user_text=transcript,
+                            detected_language=detected_lang
+                        )
+
+                        # 3. TTS Synthesis
+                        reply_audio, tts_time = text_to_speech(reply_text, detected_lang)
+
+                        # 4. Update session state
+                        total_time = round(stt_time + llm_time + tts_time, 2)
+                        st.session_state.latest_audio_reply = reply_audio
+                        st.session_state.latest_timings = {
+                            "stt": stt_time,
+                            "llm": llm_time,
+                            "tts": tts_time,
+                            "total": total_time
+                        }
+
+                    # Mark this recording as processed to prevent rerun looping
+                    st.session_state.last_processed_hash = audio_hash
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"❌ Error during call processing: {str(e)}")
+                    st.info("Tip: Check your network connection or Groq API key in .env.")
+                    st.session_state.last_processed_hash = audio_hash
+
+    # D. Render Conversation History (Chat Bubbles)
+    st.write("---")
+    st.subheader("💬 Call Transcript")
+    messages = session_store.get_messages(st.session_state.session_id)
+    if not messages:
+        st.write("*No messages yet in this call.*")
+    else:
+        for msg in messages:
+            role = msg["role"]
+            avatar = "👤" if role == "user" else "🪑"
+            label = "Customer" if role == "user" else "Aria (Sales Agent)"
+            with st.chat_message(role, avatar=avatar):
+                st.markdown(f"**{label}**: {msg['content']}")
