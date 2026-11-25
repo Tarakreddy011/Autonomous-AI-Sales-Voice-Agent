@@ -4,11 +4,18 @@ Handles audio byte streaming, language detection/fallback, and timing metrics.
 """
 
 import os
+import sys
 import time
 import asyncio
 from dotenv import load_dotenv
 from groq import Groq
 import edge_tts
+
+# Fix for Windows asyncio ProactorBasePipeTransport WinError 10054:
+# On Windows, the default ProactorEventLoop throws an unhandled callback error
+# when closing WebSockets (edge-tts). WindowsSelectorEventLoopPolicy prevents this.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Load environment variables (.env)
 load_dotenv()
@@ -20,6 +27,14 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 VOICES = {
     "en": "en-IN-NeerjaNeural",   # Indian English (Female)
     "hi": "hi-IN-SwaraNeural"    # Hindi (Female)
+}
+
+# Known Whisper hallucinations triggered by microphone silence or faint background hiss
+SILENCE_HALLUCINATIONS = {
+    "thank you", "thank you.", "thank you very much.",
+    "thanks for watching", "thanks for watching.",
+    "thank you for watching", "thank you for watching.",
+    "thanks", "thanks.", "you", "subtitles by", "bye", "bye."
 }
 
 def get_groq_client() -> Groq:
@@ -53,6 +68,27 @@ def speech_to_text(audio_bytes: bytes) -> tuple[str, str, float]:
     transcript = response.text.strip() if hasattr(response, "text") else ""
     raw_lang = getattr(response, "language", "en") or "en"
     raw_lang = raw_lang.lower()
+    
+    # Check for silence or low-confidence hallucination:
+    # 1. Check Whisper's internal no_speech_prob metadata across segments
+    is_silence = False
+    segments = getattr(response, "segments", []) or []
+    if segments:
+        no_speech_probs = [
+            s.get("no_speech_prob", 0) if isinstance(s, dict) else getattr(s, "no_speech_prob", 0)
+            for s in segments
+        ]
+        if no_speech_probs and (sum(no_speech_probs) / len(no_speech_probs) > 0.6):
+            is_silence = True
+
+    # 2. Check if the transcript matches typical silence hallucination phrases
+    clean_text = transcript.lower().strip(" .!?,")
+    hallucination_set = {h.strip(" .!?,") for h in SILENCE_HALLUCINATIONS}
+    if clean_text in hallucination_set:
+        is_silence = True
+
+    if is_silence:
+        transcript = ""
     
     # Language filtering:
     # We strictly support English ('en') and Hindi ('hi').

@@ -68,7 +68,8 @@ if audio_file is not None:
                         "tts_time": tts_time,
                         "audio_bytes": tts_bytes
                     }
-                    st.session_state.last_processed_hash = audio_hash
+                # Always update the processed hash so silence isn't repeatedly re-analyzed
+                st.session_state.last_processed_hash = audio_hash
             except Exception as e:
                 st.error(f"❌ Error during voice processing: {str(e)}")
                 st.info("Tip: Make sure your GROQ_API_KEY is properly set in the .env file.")
