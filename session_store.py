@@ -23,11 +23,15 @@ def create_or_get_session(session_id: str) -> List[Dict[str, str]]:
 def append_message(session_id: str, role: str, content: str) -> None:
     """
     Appends a new message (role: 'user' or 'assistant') to the session history.
+    Ignores empty or blank messages to prevent history pollution.
     """
+    if not content or not content.strip():
+        return
+        
     with _lock:
         if session_id not in _sessions:
             _sessions[session_id] = []
-        _sessions[session_id].append({"role": role, "content": content})
+        _sessions[session_id].append({"role": role, "content": content.strip()})
 
 def get_messages(session_id: str) -> List[Dict[str, str]]:
     """

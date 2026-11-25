@@ -196,17 +196,19 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
     except Exception as e:
         reply_text = ""
 
+    # Absolute fallback guardrail: NEVER let reply_text be empty
     if not reply_text:
         reply_text = (
-            "I apologize, I missed that. Could you please repeat what you are looking for?"
+            "I am checking our chair catalog for you. Could you tell me if you prefer a high-back chair or a medium-back chair?"
             if detected_language == "en"
-            else "माफ़ कीजियेगा, आवाज़ कट गई थी। क्या आप कृपया दोबारा बता सकते हैं?"
+            else "मैं आपके लिए कैटलॉग देख रही हूँ। क्या आप हाई-बैक या मीडियम-बैक कुर्सी पसंद करेंगे?"
         )
         
     elapsed = time.perf_counter() - start_time
     
-    # 4. Save assistant reply to session store
-    session_store.append_message(session_id, "assistant", reply_text)
+    # 4. Save assistant reply to session store (only non-empty messages)
+    if reply_text.strip():
+        session_store.append_message(session_id, "assistant", reply_text)
     
     return reply_text, round(elapsed, 2)
 
