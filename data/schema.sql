@@ -1,0 +1,2 @@
+-- Schema for furniture voice caller system
+-- (Will be executed in Step 5)
