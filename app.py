@@ -97,8 +97,7 @@ if st.session_state.call_active:
         st.audio(
             st.session_state.latest_audio_reply,
             format="audio/mp3",
-            autoplay=True,
-            key=f"agent_audio_player_{st.session_state.audio_version}"
+            autoplay=True
         )
     
     # B. Timing Breakdown
