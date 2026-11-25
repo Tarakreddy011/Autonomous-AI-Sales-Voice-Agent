@@ -26,8 +26,9 @@ load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Groq Chat Model configuration:
-# Verified via API: 'openai/gpt-oss-20b' offers sub-second latency and supports tool calling
-GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-20b")
+# Verified via API: 'qwen/qwen3.8-27b' offers ~200ms latency, fluent Hindi, and supports tool calling
+# (openai/gpt-oss-20b was consuming max_tokens on internal reasoning tokens, leaving content empty)
+GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "qwen/qwen3.8-27b")
 MAX_HISTORY_MESSAGES = 12
 
 # Supported voices for edge-tts
@@ -131,6 +132,7 @@ def text_to_speech(text: str, language: str = "en") -> tuple[bytes, float]:
         tuple of (audio_bytes: bytes, elapsed_seconds: float)
     """
     voice = VOICES.get(language, VOICES["en"])
+    safe_text = text.strip() if text and text.strip() else ("I am listening." if language == "en" else "मैं सुन रही हूँ।")
     
     start_time = time.perf_counter()
     
@@ -138,7 +140,7 @@ def text_to_speech(text: str, language: str = "en") -> tuple[bytes, float]:
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=1) as executor:
         audio_bytes = executor.submit(
-            lambda: asyncio.run(_synthesize_edge_tts(text, voice))
+            lambda: asyncio.run(_synthesize_edge_tts(safe_text, voice))
         ).result()
         
     elapsed = time.perf_counter() - start_time
@@ -187,14 +189,18 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
             model=GROQ_CHAT_MODEL,
             messages=messages,
             temperature=0.6,
-            max_tokens=150
+            max_tokens=300
         )
-        reply_text = completion.choices[0].message.content.strip()
+        raw_content = completion.choices[0].message.content or ""
+        reply_text = raw_content.strip()
     except Exception as e:
+        reply_text = ""
+
+    if not reply_text:
         reply_text = (
-            "I apologize, I am experiencing a brief connection delay. Could you please repeat that?"
+            "I apologize, I missed that. Could you please repeat what you are looking for?"
             if detected_language == "en"
-            else "माफ़ कीजियेगा, कॉल में थोड़ी रुकावट आ गई थी। क्या आप कृपया दोबारा कह सकते हैं?"
+            else "माफ़ कीजियेगा, आवाज़ कट गई थी। क्या आप कृपया दोबारा बता सकते हैं?"
         )
         
     elapsed = time.perf_counter() - start_time
