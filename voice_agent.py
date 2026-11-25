@@ -12,7 +12,7 @@ from groq import Groq
 import edge_tts
 
 import session_store
-from prompts import SYSTEM_PROMPT
+from prompts import get_system_prompt
 from tools import TOOLS_SCHEMA, execute_tool_call
 
 # Fix for Windows asyncio ProactorBasePipeTransport WinError 10054:
@@ -178,7 +178,7 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
     
     system_message = {
         "role": "system",
-        "content": f"{SYSTEM_PROMPT}\n\n[Active Call Rule]: {lang_directive}"
+        "content": f"{get_system_prompt()}\n\n[Active Call Rule]: {lang_directive}"
     }
     
     messages = [system_message] + recent_history
@@ -187,8 +187,8 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
     all_retrieved_chunks = []
     reply_text = ""
     
-    # Tool-calling loop: maximum 3 rounds to prevent runaway execution
-    MAX_TOOL_ROUNDS = 3
+    # Tool-calling loop: maximum 4 rounds to allow chaining: save_lead -> check_availability -> book_appointment
+    MAX_TOOL_ROUNDS = 4
     for round_idx in range(MAX_TOOL_ROUNDS):
         try:
             completion = client.chat.completions.create(
@@ -212,7 +212,7 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
             for tool_call in response_msg.tool_calls:
                 func_name = tool_call.function.name
                 func_args = tool_call.function.arguments
-                tool_result_json, chunks = execute_tool_call(func_name, func_args)
+                tool_result_json, chunks = execute_tool_call(func_name, func_args, session_id)
                 all_retrieved_chunks.extend(chunks)
                 
                 # Append tool result back to the working conversation list

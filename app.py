@@ -7,6 +7,7 @@ import uuid
 import hashlib
 import streamlit as st
 import session_store
+import db
 from prompts import GREETINGS
 from voice_agent import speech_to_text, text_to_speech, respond
 
@@ -38,7 +39,35 @@ if "latest_retrieved_chunks" not in st.session_state:
 
 # Header & Session Status
 st.title("🪑 Comfort Chairs - Sales Voice Agent")
-st.caption("Step 3: Multilingual RAG Knowledge Base + Tool Calling Loop")
+st.caption("Step 4: Lead Qualification, Showroom Booking & MySQL Persistence")
+
+# Live Database Sidebar for Interview Demonstration
+with st.sidebar:
+    st.subheader("📊 Database (Live)")
+    st.caption("Auto-refreshes after each turn. For demonstration.")
+    
+    try:
+        leads_data = db.get_recent_table_rows("leads", limit=3)
+        st.write("**Leads:**")
+        if leads_data:
+            st.dataframe(leads_data, use_container_width=True)
+        else:
+            st.caption("No leads recorded yet.")
+            
+        appts_data = db.get_recent_table_rows("appointments", limit=3)
+        st.write("**Appointments:**")
+        if appts_data:
+            st.dataframe(appts_data, use_container_width=True)
+        else:
+            st.caption("No appointments booked yet.")
+
+        slots_data = db.get_recent_table_rows("availability_slots", limit=6)
+        st.write("**Showroom Slots (Upcoming):**")
+        if slots_data:
+            st.dataframe(slots_data, use_container_width=True)
+    except Exception as e:
+        st.warning(f"Database connection: {e}")
+        st.caption("Ensure MySQL is running and MYSQL_PASSWORD in .env is set.")
 
 # Display Session ID badge
 col_session, col_action = st.columns([2, 1])
