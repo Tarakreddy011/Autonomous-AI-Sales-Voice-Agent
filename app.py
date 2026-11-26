@@ -70,6 +70,20 @@ with st.sidebar:
         st.caption("Ensure MySQL is running and MYSQL_PASSWORD in .env is set.")
 
 # Display Session ID badge
+with st.expander("Debug", expanded=False):
+    cfg = db.get_db_config()
+    st.write("**DB Backend**: " + cfg.get("backend", "unknown"))
+    if cfg.get("backend") == "MySQL":
+        st.write(f"Host: {cfg.get('host')}\nPort: {cfg.get('port')}\nDatabase: {cfg.get('database')}\nUser: {cfg.get('user')}")
+    else:
+        st.write(f"SQLite path: {cfg.get('sqlite_path')}")
+    try:
+        with open('debug.log', 'r') as f:
+            lines = f.readlines()[-20:]
+            st.code(''.join(lines))
+    except Exception as e:
+        st.write("No debug log available.")
+# Display Session ID badge
 col_session, col_action = st.columns([2, 1])
 with col_session:
     st.info(f"**Active Caller Session:** `{st.session_state.session_id}`")
@@ -152,15 +166,19 @@ with col_action:
                 # Save to DB idempotently
                 from db import execute_read, execute_write
                 existing = execute_read(
-                    "SELECT id FROM call_summaries WHERE session_id = ?", (session_id,)
+                    "SELECT id FROM call_summaries WHERE session_id = %s", (session_id,)
                 )
                 if not existing:
                     insert_q = """
                         INSERT INTO call_summaries (
-                            session_id, summary, sentiment, lead_status,
-                            customer_name, customer_phone, requirement, budget,
-                            appointment_booked, next_action
-                        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+                            session_id, summary, sentiment, lead_status, next_action
+                        ) VALUES (%s,%s,%s,%s,%s)
+                        ON DUPLICATE KEY UPDATE
+                            summary      = VALUES(summary),
+                            sentiment    = VALUES(sentiment),
+                            lead_status  = VALUES(lead_status),
+                            next_action  = VALUES(next_action)
+
                         """
                     execute_write(
                         insert_q,
@@ -179,7 +197,7 @@ with col_action:
                     )
                 # Update lead status if lead exists
                 execute_write(
-                    "UPDATE leads SET lead_status = ? WHERE session_id = ?",
+                    "UPDATE leads SET lead_status = %s WHERE session_id = %s",
                     (summary_data.get("lead_status"), session_id),
                 )
 

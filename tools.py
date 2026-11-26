@@ -240,6 +240,7 @@ def execute_tool_call(name: str, arguments_json: str, session_id: str) -> Tuple[
                 }
             }), []
         except Exception as e:
+            logging.exception("save_lead tool failed")
             return json.dumps({"status": "error", "message": str(e)}), []
 
     # Tool 3: check_availability
