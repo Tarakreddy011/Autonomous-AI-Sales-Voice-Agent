@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comfort Chairs: Call Aria</title>
+<style>
+:root{--bg:#e8ece9;--panel:#f6f8f6;--ink:#1c2824;--mute:#5d6b65;--line:#c9d2cd;--oak:#a8743f;--sage:#4f7d68;--blue:#3b6ea5;--amber:#c98a1b;--red:#b3402f;--user:#dfe8e3;--bot:#f1e6d8}
+@media (prefers-color-scheme:dark){:root{--bg:#141c1a;--panel:#1d2825;--ink:#e6ece8;--mute:#93a39b;--line:#2f3d38;--oak:#d09a62;--sage:#6fb095;--blue:#6aa3dd;--amber:#e3a93d;--red:#e0705f;--user:#26362f;--bot:#33291f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI","Noto Sans","Noto Sans Devanagari",system-ui,sans-serif;min-height:100vh;display:grid;grid-template-columns:1fr 340px}
+@media (max-width:900px){body{grid-template-columns:1fr}}
+main{display:flex;flex-direction:column;align-items:center;padding:28px 20px 20px;min-width:0}
+h1{margin:0;font:600 1.35rem/1.2 Georgia,"Times New Roman",serif;letter-spacing:.01em}
+.sub{margin:2px 0 0;color:var(--mute);font-size:.9rem}
+.stage{margin:26px 0 8px;display:grid;place-items:center;width:230px;height:230px}
+.orb{--lvl:0;width:150px;height:150px;border-radius:50%;background:var(--mute);transition:background .25s;position:relative;box-shadow:0 0 0 calc(6px + var(--lvl)*34px) color-mix(in srgb,var(--c,var(--mute)) 28%,transparent)}
+.orb::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:2px solid var(--c,var(--mute));opacity:.5}
+.orb[data-s=idle]{--c:var(--mute);background:var(--mute)}
+.orb[data-s=listening]{--c:var(--sage);background:var(--sage);animation:breathe 2.4s ease-in-out infinite}
+.orb[data-s=hearing]{--c:var(--sage);background:var(--sage)}
+.orb[data-s=thinking]{--c:var(--amber);background:var(--amber);animation:spin 1s linear infinite;border-radius:42% 58% 55% 45%}
+.orb[data-s=speaking]{--c:var(--blue);background:var(--blue);animation:breathe .9s ease-in-out infinite}
+.orb[data-s=ended]{--c:var(--oak);background:var(--oak)}
+@keyframes breathe{50%{transform:scale(1.05)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none!important}}
+#status{font-size:1.1rem;font-weight:600;min-height:1.6em}
+#err{color:var(--red);min-height:1.4em;font-size:.92rem;text-align:center;max-width:520px}
+.bar{display:flex;gap:10px;align-items:center;margin:10px 0 14px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;padding:9px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button.go{background:var(--sage);border-color:var(--sage);color:#fff;font-weight:600}
+button.stop{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+label.mute{display:flex;gap:6px;align-items:center;color:var(--mute)}
+#chat{width:100%;max-width:640px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px 12px;max-height:46vh}
+.msg{padding:9px 13px;border-radius:12px;max-width:86%;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--user);border-bottom-right-radius:3px}
+.msg.bot{align-self:flex-start;background:var(--bot);border-bottom-left-radius:3px}
+.badge{font-size:.72rem;color:var(--mute);margin-left:6px}
+.empty{color:var(--mute);text-align:center;margin-top:8px}
+#summary{width:100%;max-width:640px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:8px}
+#summary h2{margin:0 0 8px;font:600 1.05rem Georgia,serif}
+#summary dl{margin:0;display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:.93rem}
+#summary dt{color:var(--mute)}#summary dd{margin:0;overflow-wrap:anywhere}
+aside{background:var(--panel);border-left:1px solid var(--line);padding:18px 16px;overflow-y:auto;max-height:100vh;font-size:.85rem}
+@media (max-width:900px){aside{border-left:0;border-top:1px solid var(--line)}}
+aside h3{margin:0 0 8px;font:600 1rem Georgia,serif}
+aside .note{color:var(--mute);margin:0 0 12px}
+details{border-top:1px solid var(--line);padding:8px 0}
+summary{cursor:pointer;font-weight:600}
+table{border-collapse:collapse;width:100%;margin-top:6px;font-size:.78rem}
+td,th{border:1px solid var(--line);padding:3px 5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+pre{white-space:pre-wrap;margin:6px 0 0;font-size:.78rem}
+
+/* retry-notice */
+#retry-notice{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(80,80,80,.88);color:#fff;padding:7px 18px;border-radius:20px;font-size:.88rem;pointer-events:none;opacity:0;transition:opacity .3s}
+#retry-notice.show{opacity:1}
+</style>
+</head>
+<body>
+<main>
+  <h1>Comfort Chairs</h1>
+  <p class="sub">Call Aria, our sales assistant. English or Hindi.</p>
+  <div class="stage"><div class="orb" id="orb" data-s="idle"></div></div>
+  <div id="status" role="status" aria-live="polite">Ready to call</div>
+  <div id="err" role="alert"></div>
+  <div id="retry-notice">Did not catch that, please try again</div>
+  <div id="dbg" style="font-size:.8rem;color:var(--mute);min-height:1.2em"></div>
+  <div class="bar">
+    <button class="go" id="startBtn">Start call</button>
+    <button class="stop" id="endBtn" disabled>End call</button>
+    <label class="mute"><input type="checkbox" id="mute"> Mute my mic</label>
+  </div>
+  <div id="chat"><p class="empty" id="empty">Press Start call, then just talk. No other buttons needed.</p></div>
+  <div id="summary" hidden></div>
+</main>
+<aside>
+  <h3>For demo</h3>
+  <p class="note">What happens behind the call.</p>
+  <details open><summary>Timings</summary><pre id="timings">No turns yet.</pre></details>
+  <details><summary>Retrieved knowledge and tools</summary><pre id="extra">None yet.</pre></details>
+  <details open><summary>Live MySQL rows</summary><div id="db">Loading…</div></details>
+</aside>
+
+<script>
+/* ===== Tune these if the page cuts you off, waits too long or misses your voice ===== */
+const CFG = {
+  calibrateDelayMs: 450, // wait this long after Aria stops, so her voice is not measured as room noise
+  calibrateMs: 600,      // then measure room noise this long
+  marginX: 2.0,          // speech must be this many times louder than room noise (lower = more sensitive)
+  minThreshold: 0.008,   // never go below this loudness (0 to 1)
+  maxThreshold: 0.05,    // never go above this, so a noisy calibration cannot make speech unreachable
+  speechStartMs: 120,    // loud for this long = you started talking
+  endSilenceMs: 1000,    // quiet for this long = you finished (raise if cut off)
+  minSpeechMs: 400,      // shorter recordings are ignored (coughs, taps)
+  maxSpeechMs: 20000,    // safety stop
+  afterSpeakMs: 350      // wait after Aria finishes before listening again
+};
+/* ===================================================================================== */
+
+const $ = id => document.getElementById(id);
+let state = "idle", sessionId = null, stream = null, ctx = null, analyser = null, buf = null, raf = null;
+let noise = 0.01, calibStart = 0, calibUntil = 0, calibSum = 0, calibN = 0, dbgT = 0;
+let rec = null, chunks = [], recStart = 0, loudSince = 0, quietSince = 0, confirmed = false, discard = false, player = null;
+
+function setState(s, text) {
+  state = s; $("orb").dataset.s = s;
+  const t = { idle: "Ready to call", listening: "Listening…", hearing: "Hearing you…", thinking: "Thinking…", speaking: "Aria is speaking…", ended: "Call ended" };
+  $("status").textContent = text || t[s];
+  console.log("state:", s);
+}
+function showErr(m) { $("err").textContent = m || ""; if (m) console.error(m); }
+function addMsg(who, text, lang) {
+  const e = $("empty"); if (e) e.remove();
+  const d = document.createElement("div"); d.className = "msg " + who;
+  d.textContent = text;
+  if (lang) { const b = document.createElement("span"); b.className = "badge"; b.textContent = String(lang).toLowerCase().startsWith("h") ? "HI" : "EN"; d.appendChild(b); }
+  $("chat").appendChild(d); $("chat").scrollTop = $("chat").scrollHeight;
+}
+/* Backend field names are looked up flexibly so small naming differences do not break the page. */
+const pick = (o, keys) => { for (const k of keys) if (o && o[k] != null && o[k] !== "") return o[k]; return null; };
+const audioOf = o => { const k = Object.keys(o || {}).find(k => /audio/i.test(k) && typeof o[k] === "string" && o[k].length > 100); return k ? o[k] : null; };
+
+async function post(url, form) {
+  const r = await fetch(url, { method: "POST", body: form });
+  console.log("POST", url, r.status);
+  if (!r.ok) throw new Error(url + " returned " + r.status + ": " + (await r.text()).slice(0, 200));
+  return r.json();
+}
+function playB64(b64) {
+  return new Promise(res => {
+    if (!b64) return res();
+    player = new Audio("data:audio/mpeg;base64," + b64);
+    player.onended = player.onerror = () => res();
+    player.play().catch(e => { showErr("Audio could not play: " + e.message); res(); });
+  });
+}
+
+async function startCall() {
+  showErr(""); $("summary").hidden = true; $("startBtn").disabled = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) { showErr("Microphone blocked. Allow it in the address bar, then press Start call again."); $("startBtn").disabled = false; return; }
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try { await ctx.resume(); } catch (e) { console.warn(e); }   /* a suspended context reads silence forever */
+  const src = ctx.createMediaStreamSource(stream);
+  analyser = ctx.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+  buf = new Float32Array(analyser.fftSize);
+  $("endBtn").disabled = false;
+  setState("thinking", "Connecting…");
+  try {
+    const d = await post("/api/start", new FormData());
+    sessionId = d.session_id || d.sessionId;
+    const greet = pick(d, ["greeting", "greeting_text", "reply_text", "text", "message"]);
+    if (greet) addMsg("bot", greet, "en");
+    setState("speaking"); await playB64(audioOf(d));
+  } catch (e) { showErr("Could not start the call. " + e.message); }
+  beginListening(true); loop();
+}
+function beginListening(calibrate) {
+  if (state === "ended") return;
+  if (ctx && ctx.state !== "running") ctx.resume();
+  if (calibrate) { calibStart = performance.now() + CFG.calibrateDelayMs; calibUntil = calibStart + CFG.calibrateMs; calibSum = 0; calibN = 0; }
+  loudSince = 0; quietSince = 0; confirmed = false;
+  setState("listening");
+}
+function level() {
+  analyser.getFloatTimeDomainData(buf);
+  let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  return Math.sqrt(s / buf.length);
+}
+function loop() {
+  raf = requestAnimationFrame(loop);
+  if (state !== "listening" && state !== "hearing") { $("orb").style.setProperty("--lvl", 0); return; }
+  const now = performance.now(), lv = level();
+  $("orb").style.setProperty("--lvl", Math.min(1, lv * 8));
+  if ($("mute").checked) { if (rec) cancelRec(); return; }
+  const thr = Math.min(CFG.maxThreshold, Math.max(CFG.minThreshold, noise * CFG.marginX));
+  if (now - dbgT > 150) { dbgT = now; $("dbg").textContent = "mic level " + lv.toFixed(3) + "  |  speech threshold " + thr.toFixed(3) + "  |  audio " + ctx.state; }
+  if (now < calibStart) return;
+  if (now < calibUntil) { calibSum += lv; calibN++; noise = calibSum / calibN; return; }
+  if (lv > thr) {
+    quietSince = 0;
+    if (!rec) startRec();
+    if (!loudSince) loudSince = now;
+    if (!confirmed && now - loudSince >= CFG.speechStartMs) { confirmed = true; setState("hearing"); }
+    if (confirmed && now - recStart > CFG.maxSpeechMs) stopRec();
+  } else {
+    loudSince = 0;
+    if (!rec) noise = noise * 0.97 + lv * 0.03;            /* slowly follow room noise */
+    else {
+      if (!quietSince) quietSince = now;
+      if (!confirmed && now - quietSince > 300) cancelRec();     /* it was just a click */
+      else if (confirmed && now - quietSince >= CFG.endSilenceMs) stopRec();
+    }
+  }
+}
+function startRec() {
+  chunks = []; discard = false; recStart = performance.now();
+  rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = onRecStop; rec.start();
+}
+function cancelRec() { if (rec) { discard = true; rec.stop(); rec = null; } loudSince = 0; confirmed = false; if (state === "hearing") setState("listening"); }
+function stopRec() { if (rec) { const r = rec; rec = null; r.stop(); } }
+async function onRecStop() {
+  const dur = performance.now() - recStart - CFG.endSilenceMs * 0.5;
+  if (discard || state === "ended") return;
+  if (dur < CFG.minSpeechMs) { beginListening(false); return; }
+  const blob = new Blob(chunks, { type: chunks[0] ? chunks[0].type : "audio/webm" });
+  setState("thinking");
+  const f = new FormData(); f.append("session_id", sessionId); f.append("audio", blob, "speech.webm");
+  try {
+    const d = await post("/api/turn", f);
+    if (d.ignored) {
+      const n = document.getElementById('retry-notice');
+      if (n) { n.classList.add('show'); setTimeout(() => n.classList.remove('show'), 2000); }
+      beginListening(false); return;
+    }
+    const tr = pick(d, ["transcript", "user_text"]), lang = pick(d, ["language", "detected_language", "lang"]);
+    const reply = pick(d, ["reply_text", "reply", "response", "text"]);
+    if (tr) addMsg("user", tr, lang);
+    if (reply) addMsg("bot", reply, lang);
+    showTurn(d);
+    setState("speaking"); await playB64(audioOf(d));
+    refreshDb();
+  } catch (e) { showErr("That turn failed. " + e.message); }
+  await new Promise(r => setTimeout(r, CFG.afterSpeakMs));   /* half-duplex: ignore the mic while Aria talks */
+  beginListening(false);
+}
+function showTurn(d) {
+  const t = d.timings || d.timing;
+  $("timings").textContent = t ? Object.entries(t).map(([k, v]) => k + ": " + (typeof v === "number" ? v.toFixed(2) + " s" : v)).join("\n") : "Not provided by server.";
+  const extra = {}; for (const k of ["retrieved", "retrieved_chunks", "knowledge", "tool_calls", "tools"]) if (d[k]) extra[k] = d[k];
+  $("extra").textContent = Object.keys(extra).length ? JSON.stringify(extra, null, 1) : "Not provided by server.";
+}
+async function endCall() {
+  $("endBtn").disabled = true; cancelAnimationFrame(raf);
+  if (rec) { discard = true; rec.stop(); rec = null; }
+  if (player) player.pause();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  if (ctx) ctx.close();
+  setState("ended", "Saving the call summary…");
+  try {
+    const f = new FormData(); f.append("session_id", sessionId);
+    const d = await post("/api/end", f);
+    renderSummary(d.summary && typeof d.summary === "object" ? d.summary : d);
+    setState("ended");
+  } catch (e) { showErr("Could not save the summary. " + e.message); setState("ended"); }
+  refreshDb(); $("startBtn").disabled = false; $("startBtn").textContent = "Start new call";
+  state = "ended";
+}
+function renderSummary(o) {
+  const box = $("summary"); box.innerHTML = ""; box.hidden = false;
+  const h = document.createElement("h2"); h.textContent = "Call summary"; box.appendChild(h);
+  const dl = document.createElement("dl");
+  for (const [k, v] of Object.entries(o)) {
+    if (v == null || v === "") continue;
+    const dt = document.createElement("dt"), dd = document.createElement("dd");
+    dt.textContent = k.replace(/_/g, " "); dd.textContent = typeof v === "object" ? JSON.stringify(v) : String(v);
+    dl.append(dt, dd);
+  }
+  box.appendChild(dl);
+}
+async function refreshDb() {
+  try {
+    const d = await (await fetch("/api/db")).json(); const box = $("db"); box.innerHTML = "";
+    for (const [name, rows] of Object.entries(d)) {
+      if (!Array.isArray(rows)) continue;
+      const h = document.createElement("div"); h.style.cssText = "font-weight:600;margin-top:8px"; h.textContent = name; box.appendChild(h);
+      if (!rows.length) { const p = document.createElement("div"); p.textContent = "No rows."; p.style.color = "var(--mute)"; box.appendChild(p); continue; }
+      const cols = Object.keys(rows[0]), t = document.createElement("table");
+      const tr = document.createElement("tr"); cols.forEach(c => { const th = document.createElement("th"); th.textContent = c; tr.appendChild(th); }); t.appendChild(tr);
+      rows.forEach(r => { const row = document.createElement("tr"); cols.forEach(c => { const td = document.createElement("td"); td.textContent = r[c] == null ? "" : String(r[c]); row.appendChild(td); }); t.appendChild(row); });
+      box.appendChild(t);
+    }
+  } catch (e) { $("db").textContent = "Could not load rows: " + e.message; }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  $("startBtn").addEventListener("click", () => { $("chat").innerHTML = '<p class="empty" id="empty">Listening starts after the greeting.</p>'; startCall(); });
+  $("endBtn").addEventListener("click", endCall);
+  refreshDb();
+});
+</script>
+</body>
+</html>

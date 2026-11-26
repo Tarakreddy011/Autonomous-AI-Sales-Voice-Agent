@@ -178,7 +178,6 @@ with col_action:
                             sentiment    = VALUES(sentiment),
                             lead_status  = VALUES(lead_status),
                             next_action  = VALUES(next_action)
-
                         """
                     execute_write(
                         insert_q,
@@ -187,11 +186,6 @@ with col_action:
                             summary_data.get("summary"),
                             summary_data.get("sentiment"),
                             summary_data.get("lead_status"),
-                            summary_data.get("customer_name"),
-                            summary_data.get("customer_phone"),
-                            summary_data.get("requirement"),
-                            summary_data.get("budget"),
-                            int(summary_data.get("appointment_booked")),
                             summary_data.get("next_action"),
                         ),
                     )

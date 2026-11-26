@@ -1,70 +1,45 @@
-# Comfort Chairs AI Voice Sales Agent – Project Report
+# Comfort Chairs — Autonomous AI Sales Voice Agent (Aria)
 
 ## Problem & Business Value
-Customer‑service teams miss after‑hours calls, losing sales and increasing SDR costs. An AI voice agent provides 24/7 qualified lead capture, appointment booking, and structured CRM data, reducing missed opportunities and labor overhead.
+Showroom inquiries often arrive after hours or during peak periods, causing slow lead response, missed bookings, and high SDR overhead. **Aria** is a 24/7 bilingual (English & Hindi) AI voice sales agent that qualifies leads, answers catalog/policy questions, and books showroom visits directly into MySQL (acting as the CRM).
 
 ## What Is Implemented
-| Feature | Status |
-|---------|--------|
-| Voice interaction (STT → LLM → TTS) | ✅ |
-| Lead capture (MySQL/SQLite) | ✅ |
-| Atomic appointment booking | ✅ |
-| Call summarisation (JSON‑validated, idempotent) | ✅ |
-| Error handling & retries (STT/LLM/TTS) | ✅ |
-| UI with clean cards & width="stretch" | ✅ |
-| CRM integration (MySQL tables) | ✅ |
-| External CRM sync (Zoho/HubSpot) | *Design‑only* |
-| Distributed deployment (Docker/K8s, Redis, Kafka) | *Design‑only* |
+- **Voice I/O:** Groq `whisper-large-v3` STT (with `.webm`/`.wav` support and silence filtering) and `edge-tts` (`en-IN-NeerjaNeural` / `hi-IN-SwaraNeural`) TTS.
+- **Agent & RAG:** `qwen/qwen3.8-27b` via Groq with 4-round tool calling (`search_knowledge`, `save_lead`, `check_availability`, `book_appointment`) backed by ChromaDB (`paraphrase-multilingual-MiniLM-L12-v2`).
+- **CRM & Summaries:** MySQL connection pool (`db.py`) with atomic slot booking (`UPDATE ... WHERE is_booked=0`), post-call LLM summarization (`summarize_call.py`), and session memory (`session_store.py`). MySQL acts as the CRM.
+
+## What Is Designed (Not Built)
+- External CRM webhooks (HubSpot/Salesforce), Twilio/SIP telephony bridge, Redis session store, Kafka/Celery async write queue, and Kubernetes autoscaling.
 
 ## Architecture Summary
-See the interactive sidecar diagram **[docs/DIAGRAMS.md](docs/DIAGRAMS.md)** and the placeholder **[docs/Architecture_Diagram.pdf](docs/Architecture_Diagram.pdf)** for the system layout.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/Architecture_Diagram.pdf](docs/Architecture_Diagram.pdf).
 
-## Setup (Windows PowerShell 5.1)
+## Hands-Free Mode & Fallback UI
+- **Primary (Hands-Free Web UI):** `uvicorn server:app --port 8000` (open `http://127.0.0.1:8000` — uses Web Audio API VAD + half-duplex echo control).
+- **Fallback UI:** `streamlit run app.py` (push-to-talk).
+
+## Setup (Tested)
 ```powershell
-# Clone repo
-git clone https://github.com/<username>/comfort-chairs-agent.git
-cd comfort-chairs-agent
-
-# Virtual env
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# Dependencies
+.venv\Scripts\activate
 pip install -r requirements.txt
-
-# Environment variables (copy .env.example → .env)
-copy .env.example .env
-
-# Initialise DB (SQLite fallback)
-python -c "import db; db.init_db()"
-
-# Run app
-streamlit run app.py
+copy .env.example .env   # add GROQ_API_KEY and MYSQL_PASSWORD
+python setup_db.py
+python seed_slots.py
+python build_index.py
+uvicorn server:app --port 8000
 ```
 
-## 2‑Minute Demo
-1. Open `http://localhost:8501`.
-2. Click **Start Call** and speak a product query.
-3. Provide name, phone, requirement when asked.
-4. Agree to a suggested slot → booking confirmed.
-5. Click **End Call** → summary card shows **Willing**, **appointment = true**, **positive** sentiment.
+## 2-Minute Demo Script
+1. Click **Start call**; Aria greets you in English.
+2. Ask in English: *"I need an ergonomic office chair for 8 hours under 15,000 rupees."* (RAG retrieval).
+3. Switch to Hindi: *"कल के लिए कौन-से स्लॉट खाली हैं?"* (multilingual memory + `check_availability`).
+4. Give name and 10-digit phone, confirm the read-back, and pick a slot (`save_lead` + `book_appointment`).
+5. Click **End call**; view summary, sentiment, and live MySQL rows.
 
-## Scalability
-MVP runs a single process with SQLite. Production design (see `docs/ARCHITECTURE.md`) adds stateless workers, Redis session store, Kafka queue, Docker/K8s, and sharded vector DB to handle up to 100 k daily calls.
+## Scalability & Security
+- **Scalability:** Stateless FastAPI workers behind a load balancer, Redis for shared session state, async queue for DB/summaries, and MySQL read replicas (design only).
+- **Security:** Parameterized SQL (`%s`), `.env` secrets (untracked), backend-injected `session_id`, phone/date validation; TLS/SRTP, rate limiting, and consent prompts are production-only.
 
-## Security
-- PII (phone) masked in logs (last 4 digits).
-- Secrets stored in `.env` (git‑ignored).
-- Parameterised SQL queries prevent injection.
-- TLS for all external API traffic.
-
-## Cost per Minute (illustrative)
-| Component | Approx. USD / min |
-|-----------|--------------------|
-| Groq STT | $0.0005 |
-| Groq LLM | $0.0012 |
-| edge‑tts | $0.0008 |
-| MySQL (RDS) | $0.0003 |
-| **Total** | **≈ $0.0028 /min** |
-
-*(Replace with current rates when budgeting.)*
+## Unit Economics (Formula)
+$$\text{Cost per minute} = \text{STT}_{\text{min}} + \text{LLM}_{\text{min}} + \text{TTS}_{\text{min}} + \text{Telephony}_{\text{min}} + \frac{\text{Infra}_{\text{month}}}{\text{Total Minutes}_{\text{month}}}$$

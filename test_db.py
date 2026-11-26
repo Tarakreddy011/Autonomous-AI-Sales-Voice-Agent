@@ -17,10 +17,11 @@ appt = db.book_appointment_atomic(session_id=sid, slot_date_str=slot['slot_date'
 print('Booking result:', appt)
 # Insert call summary
 summary_q = '''
-INSERT INTO call_summaries (session_id, summary, sentiment, lead_status, appointment_booked)
-VALUES (?,?,?,?,?)
+INSERT INTO call_summaries (session_id, summary, sentiment, lead_status, next_action)
+VALUES (%s,%s,%s,%s,%s)
+ON DUPLICATE KEY UPDATE summary=VALUES(summary), sentiment=VALUES(sentiment), lead_status=VALUES(lead_status), next_action=VALUES(next_action)
 '''
-db.execute_write(summary_q, (sid, 'Test summary', 'Positive', 'Willing', 1))
+db.execute_write(summary_q, (sid, 'Test summary', 'Positive', 'Willing', 'Follow up tomorrow'))
 # Show recent rows
 print('Leads table:', db.get_recent_table_rows('leads'))
 print('Appointments table:', db.get_recent_table_rows('appointments'))

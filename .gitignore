@@ -12,6 +12,13 @@ __pycache__/
 # Streamlit config / cache
 .streamlit/
 
-# Temporary audio artifacts
+# Databases & logs
+*.db
+*.log
+debug.log
+
+# Temporary audio & backup artifacts
 *.mp3
 *.wav
+*.webm
+*.bak

@@ -36,7 +36,7 @@ logging.basicConfig(
 try:
     pool = pooling.MySQLConnectionPool(
         pool_name="mypool",
-        pool_size=5,
+        pool_size=15,
         host=os.getenv('MYSQL_HOST'),
         port=int(os.getenv('MYSQL_PORT') or 3306),
         user=os.getenv('MYSQL_USER'),
@@ -56,12 +56,19 @@ except Exception as e:
     raise
 
 def _get_conn():
-    """Fetch a connection from the pool. Caller must close it when done."""
-    try:
-        return pool.get_connection()
-    except Exception as e:
-        logging.exception("Unable to get MySQL connection from pool")
-        raise
+    """Fetch a connection from the pool, retrying briefly if all connections are busy."""
+    import time
+    for attempt in range(20):
+        try:
+            return pool.get_connection()
+        except pooling.PoolError:
+            if attempt == 19:
+                logging.exception("Unable to get MySQL connection from pool after retries")
+                raise
+            time.sleep(0.05)
+        except Exception as e:
+            logging.exception("Unable to get MySQL connection from pool")
+            raise
 
 def get_db_config():
     """Return a dict with the DB connection parameters (password omitted)."""
@@ -161,11 +168,6 @@ def _init_schema():
                 summary TEXT,
                 sentiment VARCHAR(20),
                 lead_status VARCHAR(50),
-                customer_name VARCHAR(255),
-                customer_phone VARCHAR(20),
-                requirement TEXT,
-                budget VARCHAR(255),
-                appointment_booked TINYINT,
                 next_action TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )

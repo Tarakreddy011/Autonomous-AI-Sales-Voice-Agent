@@ -19,7 +19,7 @@ result_save, _ = execute_tool_call("save_lead", args_save, session_id)
 print("save_lead result:", result_save)
 
 # 2. Check availability for tomorrow
- tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 args_check = json.dumps({"date": tomorrow})
 result_check, _ = execute_tool_call("check_availability", args_check, session_id)
 print("check_availability result:", result_check)

@@ -10,6 +10,7 @@ import asyncio
 from dotenv import load_dotenv
 from groq import Groq
 import edge_tts
+import logging
 
 import session_store
 from prompts import get_system_prompt
@@ -54,33 +55,49 @@ def get_groq_client() -> Groq:
         raise ValueError("Valid GROQ_API_KEY missing from .env file!")
     return Groq(api_key=api_key)
 
-def speech_to_text(audio_bytes: bytes) -> tuple[str, str, float]:
+def speech_to_text(audio_bytes: bytes, filename: str = "caller_audio.wav") -> tuple[str, str, float]:
     """
     Sends raw audio bytes to Groq Whisper Large v3.
-    
+
+    Args:
+        audio_bytes: Raw audio data (WAV, WebM/Opus, MP3, etc.).
+        filename:    Name hint sent to Groq so it picks the right decoder.
+                     Defaults to "caller_audio.wav" (keeps app.py working).
+                     Pass "speech.webm" when the browser sends WebM/Opus.
+
     Returns:
-        tuple of (transcript: str, detected_language: str, elapsed_seconds: float)
+        (transcript: str, detected_language: str, elapsed_seconds: float)
+        transcript is "" when audio is silence or a known hallucination phrase.
+
+    Raises:
+        Re-raises any Groq API exception after logging the full traceback.
     """
+    _log = logging.getLogger("voice_agent.stt")
     client = get_groq_client()
-    
+
     start_time = time.perf_counter()
-    
-    # Send audio bytes in-memory without creating a temporary file on disk.
-    # Groq API expects a tuple: (filename, file_bytes)
-    response = client.audio.transcriptions.create(
-        file=("caller_audio.wav", audio_bytes),
-        model="whisper-large-v3",
-        response_format="verbose_json"
-    )
-    
+    _log.info("STT request: filename=%s bytes=%d", filename, len(audio_bytes))
+
+    try:
+        response = client.audio.transcriptions.create(
+            file=(filename, audio_bytes),
+            model="whisper-large-v3",
+            response_format="verbose_json",
+        )
+    except Exception:
+        _log.exception(
+            "Groq Whisper API call FAILED (filename=%s bytes=%d)", filename, len(audio_bytes)
+        )
+        raise  # never swallow — let /api/turn catch and return 500
+
     elapsed = time.perf_counter() - start_time
-    
-    transcript = response.text.strip() if hasattr(response, "text") else ""
+
+    transcript = getattr(response, "text", "") or ""
+    transcript = transcript.strip()
     raw_lang = getattr(response, "language", "en") or "en"
     raw_lang = raw_lang.lower()
-    
-    # Check for silence or low-confidence hallucination:
-    # 1. Check Whisper's internal no_speech_prob metadata across segments
+
+    # ── Silence / hallucination detection ─────────────────────────────────────
     is_silence = False
     segments = getattr(response, "segments", []) or []
     if segments:
@@ -91,25 +108,22 @@ def speech_to_text(audio_bytes: bytes) -> tuple[str, str, float]:
         if no_speech_probs and (sum(no_speech_probs) / len(no_speech_probs) > 0.6):
             is_silence = True
 
-    # 2. Check if the transcript matches typical silence hallucination phrases
     clean_text = transcript.lower().strip(" .!?,")
     hallucination_set = {h.strip(" .!?,") for h in SILENCE_HALLUCINATIONS}
     if clean_text in hallucination_set:
         is_silence = True
 
     if is_silence:
+        _log.info("STT: silence/hallucination detected, blanking transcript (raw=%r)", transcript)
         transcript = ""
-    
-    # Language filtering:
-    # We strictly support English ('en') and Hindi ('hi').
-    # If the user speaks Hindi or Hinglish, Whisper identifies it as 'hindi' or 'hi'.
-    # If any other language is detected (e.g. noise detected as German or Spanish),
-    # we fall back to English because English is the primary store default.
+
+    # ── Language mapping ───────────────────────────────────────────────────────
     if "hindi" in raw_lang or raw_lang == "hi":
         language = "hi"
     else:
         language = "en"
-        
+
+    _log.info("STT done: transcript=%r language=%s elapsed=%.2fs", transcript, language, elapsed)
     return transcript, language, round(elapsed, 2)
 
 async def _synthesize_edge_tts(text: str, voice: str) -> bytes:
@@ -201,6 +215,7 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
             )
             response_msg = completion.choices[0].message
         except Exception as e:
+            logging.exception("Groq chat completion failed in respond(): %s", e)
             reply_text = ""
             break
 
@@ -208,19 +223,6 @@ def respond(session_id: str, user_text: str, detected_language: str = "en") -> t
         if not getattr(response_msg, "content", None) and not getattr(response_msg, "tool_calls", None):
             # continue to next iteration (will retry up to MAX_TOOL_ROUNDS)
             continue
-        try:
-            completion = client.chat.completions.create(
-                model=GROQ_CHAT_MODEL,
-                messages=messages,
-                tools=TOOLS_SCHEMA,
-                tool_choice="auto",
-                temperature=0.6,
-                max_tokens=300
-            )
-            response_msg = completion.choices[0].message
-        except Exception as e:
-            reply_text = ""
-            break
 
         # Check if the model decided to call a tool
         if response_msg.tool_calls:

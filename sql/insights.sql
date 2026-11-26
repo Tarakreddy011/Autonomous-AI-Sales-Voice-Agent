@@ -1,13 +1,31 @@
--- Insight Queries for Comfort Chairs AI Voice Sales Agent
+-- Read-only business insight queries for Comfort Chairs (MySQL)
 
--- 1. Total number of leads (calls)
-SELECT COUNT(*) AS total_calls FROM leads;
+-- 1. Total calls recorded (based on unique call summaries)
+SELECT COUNT(*) AS total_calls
+FROM call_summaries;
 
--- 2. Leads by status (Willing / Not Willing / Needs Follow‑up)
-SELECT lead_status, COUNT(*) AS count FROM leads GROUP BY lead_status;
+-- 2. Leads breakdown by lead_status
+SELECT
+    COALESCE(lead_status, 'Unknown') AS lead_status,
+    COUNT(*) AS lead_count
+FROM leads
+GROUP BY lead_status
+ORDER BY lead_count DESC;
 
--- 3. Sentiment distribution from call summaries
-SELECT sentiment, COUNT(*) AS count FROM call_summaries GROUP BY sentiment;
+-- 3. Customer sentiment counts across summarized calls
+SELECT
+    COALESCE(sentiment, 'Unknown') AS sentiment,
+    COUNT(*) AS call_count
+FROM call_summaries
+GROUP BY sentiment
+ORDER BY call_count DESC;
 
--- 4. Number of bookings per day
-SELECT slot_date, COUNT(*) AS bookings FROM appointments GROUP BY slot_date ORDER BY slot_date;
+-- 4. Confirmed showroom bookings per slot date
+SELECT
+    s.slot_date,
+    COUNT(a.id) AS bookings_count
+FROM appointments a
+JOIN availability_slots s ON a.slot_id = s.id
+WHERE a.status = 'confirmed'
+GROUP BY s.slot_date
+ORDER BY s.slot_date ASC;
